@@ -1,8 +1,6 @@
 import sys
 import time
 import warnings
-from tkinter import *
-from tkinter import ttk
 from functools import partial
 from tkinter import filedialog
 from GUI_helper_functions import *
@@ -23,7 +21,8 @@ def start_gui(root_window):
     root_window.withdraw()
 
     # Create an image widget
-    image = Image.open(image_path)
+    img_path = os.environ["IMAGE_PATH"]
+    image = Image.open(img_path)
 
     # Set the desired size in pixels
     width, height = 12, 12
@@ -183,16 +182,32 @@ def initialize_file_explorer(root_window, client_id, client_secret):
         import_frame.grid(row=1, column=0, padx=20, pady=20, sticky="news")
         label_import_file_explorer = Label(
             import_frame,
-            text="Select a CSV file to upload data set/participant list",
+            text="Select a CSV file to load participant list",
             fg="blue",
         )
         label_import_file_explorer.grid(row=0, column=0)
         import_button_explore = Button(
             import_frame,
             text="Browse Files",
-            command=lambda: browse_files(label_import_file_explorer),
+            command=lambda: browse_files(label_import_file_explorer, "import_file"),
         )
         import_button_explore.grid(row=2, column=0, sticky="w")
+
+        # -- "import_header_frame"
+        import_header_frame = LabelFrame(frame, text="Import header file")
+        import_header_frame.grid(row=2, column=0, padx=20, pady=20, sticky="news")
+        label_header_folder = Label(
+            import_header_frame,
+            text="Select a CSV file to load email subject and body",
+            fg="blue",
+        )
+        label_header_folder.grid(row=0, column=0, sticky="news")
+        validation_result_button_explore = Button(
+            import_header_frame,
+            text="Browse Files",
+            command=lambda: browse_files(label_header_folder, "import_header"),
+        )
+        validation_result_button_explore.grid(row=2, column=0, sticky="w")
 
         # -- "survey_frame"
         survey_frame = LabelFrame(frame, text="Survey Parameters")
@@ -284,6 +299,7 @@ def initialize_file_explorer(root_window, client_id, client_secret):
         apply_grid_configure(frame)
         apply_grid_configure(castor_db_info_frame)
         apply_grid_configure(import_frame)
+        apply_grid_configure(import_header_frame)
         apply_grid_configure(survey_frame)
         apply_grid_configure(survey_select_frame)
 
@@ -303,60 +319,39 @@ def initialize_file_explorer(root_window, client_id, client_secret):
 def browse_files(label_file_explorer, file_type=""):
     try:
         if "CASTOR_EDC_STUDY_ID" in os.environ:
-            if file_type == "validation_result":
-                filename_path = filedialog.askdirectory(
-                    initialdir="/", title="Select a directory to save files"
-                )
-                slash_position = filename_path.rfind("/")
-                filepath = filename_path + "/"
-            else:
-                filename_path = filedialog.askopenfilename(
-                    initialdir="/",
-                    title="Select a File",
-                    filetypes=(("CSV files", "*.csv*"),),
-                )
-                slash_position = filename_path.rfind("/")
-                filepath = filename_path[: slash_position + 1]
+
+            # fetch file info
+            filename_path = filedialog.askopenfilename(
+                initialdir="/",
+                title="Select a File",
+                filetypes=(("CSV files", "*.csv*"),),
+            )
+            slash_position = filename_path.rfind("/")
+            filepath = filename_path[: slash_position + 1]
 
             filename = filename_path[slash_position + 1 :]
-            database_name = os.environ["CASTOR_EDC_STUDY_NAME"]
 
-            # Change label contents
-            if file_type == "validation_result":
-                if filepath != "/":  # type selected and filepath != empty
-                    datetime_now = datetime.now().strftime("%d_%m_%Y_%H%M%S")
-                    os.environ["FULL_EXPORT_FILE_PATH"] = (
-                        filepath
-                        + "validation_export_"
-                        + database_name
-                        + "_"
-                        + datetime_now
-                        + ".csv"
-                    )
-                    os.environ["VALIDATION_RESULT_FILE_PATH"] = (
-                        filepath
-                        + "validation_results_"
-                        + database_name
-                        + "_"
-                        + datetime_now
-                        + ".txt"
-                    )
-                    os.environ["FULL_VALIDATION_IMPORT_FILE_PATH"] = (
-                        filepath
-                        + "validation_import_"
-                        + database_name
-                        + "_"
-                        + datetime_now
-                        + ".csv"
-                    )
-                    os.environ["IMPORT_LOG_FILE_PATH"] = (
-                        filepath + "import_results_" + datetime_now + ".txt"
-                    )
-                label_file_explorer.configure(text="Folder selected: " + filename)
-            else:
+            if file_type == "import_file":
+                datetime_now = datetime.now().strftime("%d_%m_%Y_%H%M%S")
+                import_log_file_name = f"survey_invite_results_{datetime_now}.txt"
                 os.environ["IMPORT_FILE_PATH"] = filepath.replace("/", "\\")
                 os.environ["IMPORT_FILE_NAME"] = filename
-                label_file_explorer.configure(text="File selected: " + filename)
+                os.environ["IMPORT_LOG_FILE_NAME"] = import_log_file_name
+                os.environ["IMPORT_LOG_FILE_PATH"] = filepath + import_log_file_name
+                os.environ["FULL_VALIDATION_IMPORT_FILE_PATH"] = (
+                    filepath
+                    + "validation_import_"
+                    + filename
+                    + "_"
+                    + datetime_now
+                    + ".csv"
+                )
+            elif file_type == "import_header":
+                os.environ["IMPORT_HEADER_FILE_PATH"] = filepath.replace("/", "\\")
+                os.environ["IMPORT_HEADER_FILE_NAME"] = filename
+
+            # Change label contents
+            label_file_explorer.configure(text="File selected: " + filename)
         else:
             messagebox.showerror(
                 title="Castor Study ID missing",
@@ -371,7 +366,7 @@ def browse_files(label_file_explorer, file_type=""):
 base_dir = getattr(sys, "_MEIPATH", os.path.abspath(os.path.dirname(__file__)))
 
 # Construct the path to the image file relative to the base directory
-image_path = os.path.join(base_dir, "help_icon.png")
+os.environ["IMAGE_PATH"] = os.path.join(base_dir, "help_icon.png").replace("\\\\", "\\")
 
 # Enable warning capture
 warnings.filterwarnings("always")
@@ -384,9 +379,11 @@ with warnings.catch_warnings(record=True) as captured_warnings:
             # Global variable to store the initial window size
             initial_window_size = None
 
+            os.environ["PRESENTATION_LAYER"] = "GUI"
+
             # Call the start_gui function to start the process, only when run from "main" and not when importing
             root = Tk()
-            root.title("CastorDataBridge")
+            root.title("Castor Survey Inviter")
             start_gui(root)
         except Exception as e:
             handle_error(e)

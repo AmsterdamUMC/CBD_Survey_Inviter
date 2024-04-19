@@ -1,11 +1,15 @@
-import re
-import requests as req
-from log_handling import *
-from tkinter import messagebox
+import csv
+import threading
+from tkinter import *
+from tkinter import ttk
+from send_survey_invite import *
+from get_site_list import get_site_lists
+from get_survey_list import get_survey_lists
+from get_survey_package_list import get_survey_package_list
 
 
 # Function to submit entries from second screen of GUI - MAIN PROCESS START
-def submit_file_explorer_entries():
+def submit_file_explorer_entries(root_window, frame):
 
     try:
         # check if all required input fields are filled in
@@ -15,12 +19,136 @@ def submit_file_explorer_entries():
             "SELECTED_SURVEY_PACKAGE",
             "SELECTED_SITE_ID",
             "SELECTED_SITE_NAME",
+            "IMPORT_FILE_PATH",
+            "IMPORT_HEADER_FILE_PATH",
         ]
 
-        if all(variable in os.environ for variable in env_vars):
+        import_header_path = os.environ["IMPORT_HEADER_FILE_PATH"]
+        import_header_name = os.environ["IMPORT_HEADER_FILE_NAME"]
+        encodings_to_try = ["UTF-8", "ISO-8859-1"]
+        df = pd.DataFrame()
+        for encoding in encodings_to_try:
+            try:
+                df = pd.read_csv(
+                    import_header_path + import_header_name,
+                    delimiter=";",
+                    encoding=encoding,
+                )
+                break  # If successful, exit the loop
+            except UnicodeDecodeError:
+                print(
+                    f" Warning: Failed to decode with encoding {encoding}. Trying the next encoding."
+                )
+
+        # get package invitation info
+        package_invitation_subject = None
+        if "Subject" in df.columns:
+            package_invitation_subject = df["Subject"][0]
+
+        # read survey info csv
+        import_file_path = os.environ["IMPORT_FILE_PATH"]
+        import_file_name = os.environ["IMPORT_FILE_NAME"]
+        df = pd.DataFrame()
+        for encoding in encodings_to_try:
+            try:
+                df = pd.read_csv(
+                    import_file_path + import_file_name,
+                    delimiter=";",
+                    encoding=encoding,
+                )
+                break  # If successful, exit the loop
+            except UnicodeDecodeError:
+                print(
+                    f" Warning: Failed to decode with encoding {encoding}. Trying the next encoding."
+                )
+
+        if (
+            all(variable in os.environ for variable in env_vars)
+            and any(
+                col.lower() in df.columns.str.lower()
+                for col in ["email_address", "email address"]
+            )
+            and any(
+                col.lower() in df.columns.str.lower()
+                for col in ["participant_id", "participant id"]
+            )
+            and package_invitation_subject is not None
+        ):
+            # change title
+            root_window.title("Sending out Surveys")
+
+            # empty the frame and create a blank one
+            frame.destroy()
+            new_frame = Frame(root_window, width=200, height=200)
+            new_frame.pack()
+
+            progress_label = Label(new_frame, text="Processing surveys...")
+            progress_label.grid(row=0, column=0, padx=10, pady=10)
+
+            progress_bar = ttk.Progressbar(
+                new_frame, orient="horizontal", length=300, mode="determinate"
+            )
+            progress_bar.grid(row=1, column=0, padx=10, pady=10)
+
+            # update root/frame to retrieve proper size of the window
+            root_window.update()
+            new_frame.update_idletasks()
+
+            # get screen width and height
+            screen_width = root_window.winfo_screenwidth()
+            screen_height = root_window.winfo_screenheight()
+
+            # calculate window position
+            window_width = new_frame.winfo_width()
+            window_height = new_frame.winfo_height()
+            x = (screen_width - window_width) // 2
+            y = (screen_height - window_height) // 2
+
+            # adjust "root" window placement
+            root_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+            # # update root to retrieve proper size of the window
+            root_window.update()
+            frame.update_idletasks()
+
+            # get some specifics about (to be) imported data set
+            import_file_path = os.environ["IMPORT_FILE_PATH"]
+            import_file_name = os.environ["IMPORT_FILE_NAME"]
+
+            encodings_to_try = ["UTF-8", "ISO-8859-1"]
+            df_survey_file = pd.DataFrame()
+            for encoding in encodings_to_try:
+                try:
+                    df_survey_file = pd.read_csv(
+                        import_file_path + import_file_name,
+                        delimiter=";",
+                        encoding=encoding,
+                    )
+                    break  # If successful, exit the loop
+                except UnicodeDecodeError:
+                    print(
+                        f" Warning: Failed to decode with encoding {encoding}. Trying the next encoding."
+                    )
+
+            total_participants = len(df_survey_file.index)
+            progress_bar["maximum"] = total_participants * 2  # each row has two events
+
+            # start asynchronize import while progress bar is shown
+            t = threading.Thread(
+                target=send_survey_invite(
+                    root_window, new_frame, progress_bar, progress_label
+                )
+            )
+            t.start()
+        elif "IMPORT_HEADER_FILE_PATH" not in os.environ:
             messagebox.showerror(
-                title="Let's go",
-                message="Do something",
+                title="Survey Header Info Missing",
+                message="Please select a CSV file with survey header info",
+            )
+        elif "IMPORT_FILE_PATH" not in os.environ:
+            messagebox.showerror(
+                title="Survey Data Missing",
+                message="Please select a CSV file for your survey data",
             )
         elif "CASTOR_EDC_STUDY_ID" not in os.environ:
             messagebox.showerror(
@@ -43,6 +171,29 @@ def submit_file_explorer_entries():
                 title="Castor Site Info Missing",
                 message="Please select a Site",
             )
+        elif all(
+            col.lower() not in df.columns.str.lower()
+            for col in ["email_address", "email address"]
+        ):
+            messagebox.showerror(
+                title="Email Missing",
+                message="Please provide a 'Email Address' column in your survey CSV",
+            )
+
+        elif all(
+            col.lower() not in df.columns.str.lower()
+            for col in ["participant_id", "participant id"]
+        ):
+            messagebox.showerror(
+                title="Participant Info Missing",
+                message="Please provide a 'Participant ID' column in your survey CSV",
+            )
+        elif package_invitation_subject is None:
+            messagebox.showerror(
+                title="Package Invitation Subject missing",
+                message="Please provide a 'Subject' column in your header CSV",
+            )
+
     except Exception as err:
         handle_error(err)
 
@@ -52,7 +203,7 @@ def handle_submit(_window, _frame):
     confirmation_text = "Are you sure you want to submit?"
     result = messagebox.askyesno("Confirmation", confirmation_text)
     if result:
-        submit_file_explorer_entries()
+        submit_file_explorer_entries(_window, _frame)
 
 
 # Function to apply grid configuration (padding) to all widgets in a frame
@@ -112,7 +263,7 @@ def on_selection_changed(
             os.environ["CASTOR_EDC_STUDY_ID"] = selected_id
 
             # Update the site combobox based on the selected Castor database
-            site_name_list, site_id_list, site_date_format_list = get_site_lists()
+            site_name_list, site_id_list = get_site_lists()
             site_combobox["values"] = site_name_list
 
             # Update the survey combobox based on the selected Castor database
@@ -134,7 +285,7 @@ def on_selection_changed(
             new_selected_option_text = new_selected_option_text.replace(" ", "_")
             os.environ["CASTOR_EDC_STUDY_NAME"] = new_selected_option_text
         elif dropdown_name == "site":
-            site_name_list, site_id_list, _ = get_site_lists()
+            site_name_list, site_id_list = get_site_lists()
             selected_option_index = site_name_list.index(selected_option_text)
             selected_id = site_id_list[selected_option_index]
             selected_name = site_name_list[selected_option_index]
@@ -180,132 +331,22 @@ def on_selection_changed(
         handle_error(exception)
 
 
-def get_site_lists():
-    from api_call import perform_api_call
+def get_csv_rows_headers(input_file_path, input_file):
 
-    # open session
-    session = req.Session()
-
-    # Create and configure the dropdown menu
-    site_name_list = []
-    site_id_list = []
-    site_date_format_list = []
-    if "CASTOR_EDC_STUDY_ID" in os.environ:
-        castor_study_id = os.environ["CASTOR_EDC_STUDY_ID"]
-        access_token = os.environ["ACCESS_TOKEN"]
-
-        # get page count for sites
-        sites_list = json.loads(
-            perform_api_call("site", castor_study_id, access_token, "GET")
-        )
-        page_count = sites_list["page_count"]
-
-        # Loop over the pages and retrieve participant data
-        paged_sites_list = []
-        for i in range(1, page_count + 1):
-            api_endpoint = f"site?page={i}"
-            paged_field_request = json.loads(
-                perform_api_call(
-                    api_endpoint, castor_study_id, access_token, "GET", session=session
-                )
-            )
-            paged_sites_list.extend(paged_field_request["_embedded"]["sites"])
-
-        # retrieve lists of id's and names
-        for site in paged_sites_list:
-            if site["deleted"] is not True:
-                site_name_list.append(site["name"])
-                site_id_list.append(site["id"])
-                site_date_format_list.append(site["date_format"])
-
-        # sort the lists
-        sorted_lists = sorted(zip(site_name_list, site_id_list, site_date_format_list))
-        site_name_list, site_id_list, site_date_format_list = zip(*sorted_lists)
-
-    return site_name_list, site_id_list, site_date_format_list
-
-
-def get_survey_lists():
-    from api_call import perform_api_call
-
-    # open session
-    session = req.Session()
-
-    # Create and configure the dropdown menu
-    survey_name_list = []
-    survey_id_list = []
-    if "CASTOR_EDC_STUDY_ID" in os.environ:
-        castor_study_id = os.environ["CASTOR_EDC_STUDY_ID"]
-        access_token = os.environ["ACCESS_TOKEN"]
-
-        # get page count for surveys
-        survey_list = json.loads(
-            perform_api_call("survey", castor_study_id, access_token, "GET")
-        )
-        page_count = survey_list["page_count"]
-
-        # Loop over the pages and retrieve participant data
-        paged_surveys_list = []
-        for i in range(1, page_count + 1):
-            api_endpoint = f"survey?page={i}"
-            paged_field_request = json.loads(
-                perform_api_call(
-                    api_endpoint, castor_study_id, access_token, "GET", session=session
-                )
-            )
-            paged_surveys_list.extend(paged_field_request["_embedded"]["surveys"])
-
-        # retrieve lists of id's and names
-        for survey in paged_surveys_list:
-            survey_name_list.append(survey["name"])
-            survey_id_list.append(survey["id"])
-
-        # sort the lists
-        sorted_lists = sorted(zip(survey_name_list, survey_id_list))
-        survey_name_list, survey_id_list = zip(*sorted_lists)
-
-    return survey_name_list, survey_id_list
-
-
-def get_survey_package_list(selected_survey_id):
-    from api_call import perform_api_call
-
-    if "CASTOR_EDC_STUDY_ID" in os.environ:
-        castor_study_id = os.environ["CASTOR_EDC_STUDY_ID"]
-        access_token = os.environ["ACCESS_TOKEN"]
-
-        existing_survey_packages = json.loads(
-            perform_api_call("survey-package", castor_study_id, access_token, "GET")
-        )
-        page_count = existing_survey_packages["page_count"]
-
-        # Loop over the pages and retrieve existing repeating data instances
-        paged_existing_package_request = []
-        for i in range(1, page_count + 1):
-            category = f"survey-package?page={i}"
-            paged_survey_package_request = json.loads(
-                perform_api_call(category, castor_study_id, access_token, "GET")
-            )
-            paged_existing_package_request.extend(
-                paged_survey_package_request["_embedded"]["survey_packages"]
+    # List of encodings to try
+    encodings_to_try = ["UTF-8", "ISO-8859-1"]
+    for encoding in encodings_to_try:
+        try:
+            with open(
+                input_file_path + input_file, "r", encoding=encoding, newline=""
+            ) as csv_file:
+                csv_dict_reader = csv.DictReader(csv_file, delimiter=";")
+                csv_header = csv_dict_reader.fieldnames
+                csv_rows = [list(row.values()) for row in csv_dict_reader]
+            break  # If successful, exit the loop
+        except UnicodeDecodeError:
+            print(
+                f"Warning: Failed to decode with encoding {encoding}. Trying the next encoding."
             )
 
-        # Extract matching survey_packages from the JSON response
-        matching_package_ids = []
-        matching_package_names = []
-        for package in paged_existing_package_request:
-            package_id = package["survey_package_id"]
-            package_name = package["name"]
-            embedded = package["_embedded"]["surveys"]
-            for survey in embedded:
-                survey_id = survey["survey_id"]
-                if survey_id == selected_survey_id:
-                    matching_package_ids.append(package_id)
-                    matching_package_names.append(package_name)
-
-        if matching_package_names and matching_package_ids:
-            # sort the lists
-            sorted_lists = sorted(zip(matching_package_names, matching_package_ids))
-            matching_package_names, matching_package_ids = zip(*sorted_lists)
-
-        return matching_package_ids, matching_package_names
+    return csv_header, csv_rows

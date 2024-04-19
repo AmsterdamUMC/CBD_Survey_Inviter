@@ -22,9 +22,7 @@ def perform_api_call(
         else:
             url = "https://data.castoredc.com/api/study/" + study_id + "/" + category
 
-        if return_value == "export_data" or return_value == "export_structure":
-            headers = {"accept": "text/csv", "Authorization": "Bearer " + access_token}
-        elif return_value == "import_report_survey":
+        if return_value == "survey_invite":
             headers = {
                 "accept": "application/hal+json",
                 "Authorization": "Bearer " + access_token,
