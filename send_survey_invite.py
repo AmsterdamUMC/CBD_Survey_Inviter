@@ -72,6 +72,10 @@ def send_survey_invite(
                 delimiter=";",
                 encoding=encoding,
             )
+
+            # Replace escaped newline characters '\\n' with '\n'
+            df_header = df_header.replace(r'\\n', '\n', regex=True)
+
             break  # If successful, exit the loop
         except UnicodeDecodeError:
             print(

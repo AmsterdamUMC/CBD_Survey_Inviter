@@ -126,9 +126,6 @@ def replace_placeholders(row, body, df):
             value = row[placeholder_clean]
             body = body.replace(f"{{{placeholder}}}", str(value))
 
-    # Replace newline characters with carriage returns
-    body = body.replace("\n", "\\n")
-
     return body
 
 
