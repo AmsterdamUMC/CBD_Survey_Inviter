@@ -2,7 +2,7 @@
 
 ## Overview
 
-CastorDataBridge is a tool designed to streamline the process of sending out survey invitations using Castor EDC. This guide outlines the steps required to set up and use the tool effectively.
+CastorDataBridge - Survey Invite is a tool designed to streamline the process of sending out survey invitations using Castor EDC. This guide outlines the steps required to set up and use the tool effectively.
 
 ## Table of Contents
 
