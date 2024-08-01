@@ -1,4 +1,5 @@
-CastorDataBridge - Survey Invite
+CastorDataBridge - Survey Inviter
+
 Copyright (C) 2024  Sjoerd Manger - Amsterdam UMC
 
 This program is free software: you can redistribute it and/or modify
