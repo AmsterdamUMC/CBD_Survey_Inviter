@@ -15,18 +15,18 @@ def handle_error(error):
     traceback_info = traceback.format_exc()
 
     # Check if the file exists and delete
-    if "IMPORT_FILE_PATH" in os.environ:
+    if "IMPORT_LOG_FILE_PATH" in os.environ:
         datetime_now = datetime.now().strftime("%d_%m_%Y_%H%M%S")
         full_error_file_path = os.path.join(
-            os.environ["IMPORT_FILE_PATH"], "error_log_", datetime_now, ".txt"
+            os.environ["OUTPUT_PATH"], "error_log_", datetime_now, ".txt"
         )
+        os.environ["OUTPUT_ERROR_PATH"] = full_error_file_path
         if os.path.isfile(full_error_file_path):
             os.remove(full_error_file_path)
     else:
-        current_dir = os.getcwd()  # Get the current working directory
         datetime_now = datetime.now().strftime("%d_%m_%Y_%H%M%S")
-        full_error_file_path = current_dir + "\\error_log_" + datetime_now + ".txt"
-        os.environ["ERROR_LOG_FILE_PATH"] = full_error_file_path
+        full_error_file_path = os.environ["WORK_DIR"] + "\\error_log_" + datetime_now + ".txt"
+        os.environ["OUTPUT_ERROR_PATH"] = full_error_file_path
 
     # check if script is run from Pycharm to raise error directly, else write to file
     if "PYCHARM_HOSTED" in os.environ:
@@ -38,12 +38,12 @@ def handle_error(error):
             file.write("Traceback:\n")
             file.write(traceback_info)
             log_or_show_message(
-                f"An error occurred, please report to rdm@amsterdamumc.nl and include details from {os.environ['ERROR_LOG_FILE_PATH']}",
+                f"An error occurred, please report to rdm@amsterdamumc.nl and include details from {os.environ['ERROR_OUTPUT_PATH']}",
                 "GUI",
                 "error",
             )
             print(
-                f"An error occurred, please report to rdm@amsterdamumc.nl and include details from {os.environ['ERROR_LOG_FILE_PATH']}"
+                f"An error occurred, please report to rdm@amsterdamumc.nl and include details from {os.environ['ERROR_OUTPUT_PATH']}"
             )
 
 

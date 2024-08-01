@@ -14,7 +14,7 @@ def send_survey_invite(
 
     # get log file path and write
     import_log_file_path = os.environ["IMPORT_LOG_FILE_PATH"]
-    with open(import_log_file_path, "a") as file:
+    with open(import_log_file_path, "w") as file:
         file.write("---- STARTING SURVEY INVITATION SET ----\n")
 
     # open session
@@ -156,6 +156,7 @@ def send_survey_invite(
         if "survey_package_instance_id" in json_result:
             # Save the updated DataFrame to a new CSV file or append to existing (for all subsequent rows)
             filename = f"survey_package_invitations_{now}.csv"
+            output_path = os.environ["OUTPUT_PATH"] + "\\" + filename
 
             # Create a new DataFrame to store the index and text separately
             df_to_save = pd.DataFrame(
@@ -170,10 +171,10 @@ def send_survey_invite(
             df_to_save.set_index("Index", inplace=True)
 
             # Check if the file exists
-            if not os.path.isfile(filename):
-                df_to_save.to_csv(filename, index=False)
+            if not os.path.isfile(output_path):
+                df_to_save.to_csv(output_path, index=False)
             else:
-                df_to_save.to_csv(filename, mode="a", header=False, index=False)
+                df_to_save.to_csv(output_path, mode="a", header=False, index=False)
 
         else:
             with open(import_log_file_path, "a") as f:
@@ -193,8 +194,8 @@ def send_survey_invite(
     label = tk.Label(
         root,
         text=f"Done sending out surveys! \n "
-             f"Please check '{filename}' for an overview of sent survey packages \n"
-             f"and '{os.environ['IMPORT_LOG_FILE_NAME']}' for any possible errors.",
+             f"Please check 'output/{filename}' for an overview of sent survey packages \n"
+             f"and 'output/{os.environ['IMPORT_LOG_FILE_NAME']}' for any possible errors.",
     )
     label.grid(row=0, column=0)
 

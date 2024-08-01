@@ -331,21 +331,27 @@ def browse_files(label_file_explorer, file_type=""):
 
             filename = filename_path[slash_position + 1 :]
 
+            # Get the current working directory (the location from which the executable or script is run)
+            current_dir = (
+                sys.argv[0].rsplit(r"\CDB_Survey_Inviter.exe", 1)[0].rsplit(r"\GUI_module.py", 1)[0]
+            )
+
+            os.environ["WORK_DIR"] = current_dir
+            output_path = os.path.join(current_dir, "output")
+            os.environ["OUTPUT_PATH"] = output_path
+
+            # check if "output" folder exists
+            if not os.path.exists("output"):
+                print(" -- The 'output' folder does not exist, creating output folder -- ")
+                os.makedirs("output")  # Create the "output" folder
+
             if file_type == "import_file":
                 datetime_now = datetime.now().strftime("%d_%m_%Y_%H%M%S")
                 import_log_file_name = f"survey_invite_results_{datetime_now}.txt"
                 os.environ["IMPORT_FILE_PATH"] = filepath.replace("/", "\\")
                 os.environ["IMPORT_FILE_NAME"] = filename
                 os.environ["IMPORT_LOG_FILE_NAME"] = import_log_file_name
-                os.environ["IMPORT_LOG_FILE_PATH"] = filepath + import_log_file_name
-                os.environ["FULL_VALIDATION_IMPORT_FILE_PATH"] = (
-                    filepath
-                    + "validation_import_"
-                    + filename
-                    + "_"
-                    + datetime_now
-                    + ".csv"
-                )
+                os.environ["IMPORT_LOG_FILE_PATH"] = output_path + "\\" + import_log_file_name
             elif file_type == "import_header":
                 os.environ["IMPORT_HEADER_FILE_PATH"] = filepath.replace("/", "\\")
                 os.environ["IMPORT_HEADER_FILE_NAME"] = filename
@@ -391,7 +397,7 @@ with warnings.catch_warnings(record=True) as captured_warnings:
 # Iterate over the captured warnings and print them
 for warning in captured_warnings:
     # Check if the file exists and delete
-    full_file_path = os.path.join(os.environ["IMPORT_FILE_PATH"], "warning_log.txt")
+    full_file_path = os.path.join(os.environ["OUTPUT_PATH"], "warning_log.txt")
     if os.path.isfile(full_file_path):
         os.remove(full_file_path)
     write_warning_to_file(warning, full_file_path)
