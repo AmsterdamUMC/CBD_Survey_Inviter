@@ -1,8 +1,8 @@
-# CastorDataBridge - Survey Invite
+# CastorDataBridge - Survey Inviter
 
 ## Overview
 
-CastorDataBridge - Survey Invite is a tool designed to streamline the process of sending out survey invitations using Castor EDC. This guide outlines the steps required to set up and use the tool effectively.
+CastorDataBridge - Survey Inviter is a tool designed to streamline the process of sending out survey invitations using Castor EDC. This guide outlines the steps required to set up and use the tool effectively.
 
 ## Table of Contents
 
@@ -11,7 +11,8 @@ CastorDataBridge - Survey Invite is a tool designed to streamline the process of
 3. [API Credentials](#step-3-api-credentials)
 4. [Email Body Format](#step-4-email-body-format)
 5. [Output Files](#step-5-output-files)
-6. [Troubleshooting](#troubleshooting)
+6. [Developer Guide](#developer-guide)   
+8. [Getting Help](#getting-help)
 
 ---
 
@@ -59,11 +60,48 @@ Format your email body using "\n\n" for line breaks.
 ## Step 5: Output Files
 
 After running the tool, you'll get two output files:
-- `survey_package_invitations_[current_date].csv`: List of sent surveys.
-- `survey_invite_results_[current_date].csv`: Error logs, if any.
+- `output/survey_package_invitations_[current_date].csv`: List of sent surveys.
+- `output/survey_invite_results_[current_date].csv`: Error logs, if any.
 
 ---
 
-## Troubleshooting
+## Developer guide
+### Style Guide
+This application is formatted using the [Black](https://github.com/psf/black) formatter. Please use this before submitting any code changes.
 
-If you encounter issues or need further assistance, please send a mail to rdm@amsterdamumc.nl.
+### Standalone application
+
+It's possible to create a standalone executable (application) with [PyInstaller](https://pyinstaller.org/en/stable/). 
+To create this standalone application all you need to do is run two commands. 
+The first command is needed to create a `.spec` file. This can be seen as a configuration file.
+Here's an example of how to create such a file with pyinstaller:
+
+```python
+pyinstaller --onefile --add-data "help_icon.png;." api_call.py get_API_access_token.py get_site_list.py get_survey_list.py get_survey_package_list.py GUI_helper_functions.py GUI_module.py helper_functions.py log_handling.py send_survey_invite.py
+```
+
+This will create a `.spec` file called `api_call.spec` (because it's the first Python script mentioned in the commands above).
+You can find an example `.spec` file [here](/examples/api_call.spec).
+When desired, one can adjust one of the `.spec` file parameters.
+
+If and once these parameters are adjusted, you can create the executable by running: 
+```python
+pyinstaller api_call.spec
+```
+
+This will create a new folder within your Python work environment called "dist".
+You can run the application by simply executing the newly created `.exe` file. 
+When executing the `.spec` file with the `pyinstaller` command, a new file with the `.exe` extention will be created in the aforementioned folder.
+
+
+### Package development
+- Branching
+  - When creating a new branch, please use the following convention: `<issue_number>_<description>_<author_name>`.
+- Pull Requests
+  - When creating a pull request, please use the following convention: `<type>: <description>`. Example _types_ are `fix:`, `feat:`, `build:`, `chore:`, `ci:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:`, and others based on the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines).
+
+## Getting help
+
+In the case an error occurs when using CastorDataBridge an error log is created. The Research Data Management team of Amsterdam UMC (rdm@amsterdamumc.nl) may ask you to provide this log in helping to fix the error. Please find some actions/checks you can do yourself when unexpected behavior from the application occurs. 
+
+
