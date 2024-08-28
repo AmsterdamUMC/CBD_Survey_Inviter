@@ -27,6 +27,8 @@ def get_access_token(client_id, client_secret):
         if response.status_code == 200:
             access_token = json_response["access_token"]
             os.environ["ACCESS_TOKEN"] = str(access_token)
+            os.environ["CLIENT_ID"] = client_id
+            os.environ["CLIENT_SECRET"] = client_secret
             access_granted = True
 
             # store first access time to check for validity of token (5 hours)

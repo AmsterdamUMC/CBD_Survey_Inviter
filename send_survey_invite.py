@@ -74,7 +74,7 @@ def send_survey_invite(
             )
 
             # Replace escaped newline characters '\\n' with '\n'
-            df_header = df_header.replace(r'\\n', '\n', regex=True)
+            df_header = df_header.replace(r"\\n", "\n", regex=True)
 
             break  # If successful, exit the loop
         except UnicodeDecodeError:
@@ -183,10 +183,7 @@ def send_survey_invite(
         # update progress bar
         update_progress_bar(tkinter_frame, progress_bar)
 
-    # Call the function to show upload options
-    def close_app():
-        root.destroy()
-
+    # create "Done" screen
     root = tk.Tk()
     root.title("Done")
 
@@ -194,22 +191,24 @@ def send_survey_invite(
     label = tk.Label(
         root,
         text=f"Done sending out surveys! \n "
-             f"Please check 'output/{filename}' for an overview of sent survey packages \n"
-             f"and 'output/{os.environ['IMPORT_LOG_FILE_NAME']}' for any possible errors.",
+        f"Please check 'output/{filename}' for an overview of sent survey packages \n"
+        f"and 'output/{os.environ['IMPORT_LOG_FILE_NAME']}' for any possible errors.",
     )
     label.grid(row=0, column=0)
 
     # Create a "Done" button
+    def close_app():
+        root.destroy()
+
     done_button = tk.Button(root, text="Done", width=10, command=close_app)
     done_button.grid(row=1, column=0)
 
     apply_grid_configure(root)
 
-    # destroy current window
-    tkinter_window.destroy()
+    # Call the restart_new_session function to prompt user for another session
+    from GUI_helper_functions import restart_new_session
 
-    with open(import_log_file_path, "a") as file:
-        file.write("---- EXITING PROGRAM ----\n")
+    restart_new_session(tkinter_window, import_log_file_path)
 
     # close session
     session.close()

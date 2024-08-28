@@ -56,8 +56,7 @@ def perform_api_call(
                 with open(import_log_file_path, "a") as f:
                     f.write(sleep_message)
 
-                if os.environ["PRESENTATION_LAYER"] == "GUI":
-                    messagebox.showwarning("Sleeping", sleep_message)
+                messagebox.showwarning("Sleeping", sleep_message)
 
                 time.sleep(remainder)
 

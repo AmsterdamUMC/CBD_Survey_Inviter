@@ -5,6 +5,7 @@ from tkinter import ttk
 from send_survey_invite import *
 from get_site_list import get_site_lists
 from get_survey_list import get_survey_lists
+from get_API_access_token import check_access_token_expiry
 from get_survey_package_list import get_survey_package_list
 
 
@@ -266,12 +267,22 @@ def on_selection_changed(
             site_name_list, site_id_list = get_site_lists()
             site_combobox["values"] = site_name_list
 
+            # Automatically select the first site after the database selection
+            if site_name_list:
+                site_combobox.current(0)
+                site_combobox.event_generate("<<ComboboxSelected>>")
+
             # Update the survey combobox based on the selected Castor database
             (
                 survey_name_list,
                 survey_id_list,
             ) = get_survey_lists()
             survey_combobox["values"] = survey_name_list
+
+            # Automatically select the first survey after the site selection
+            if survey_name_list:
+                survey_combobox.current(0)
+                survey_combobox.event_generate("<<ComboboxSelected>>")
 
             # remove all special characters before storing selected study name
             # this name will be used as a part of the generated validation files
@@ -314,6 +325,10 @@ def on_selection_changed(
 
             if survey_package_names:
                 survey_package_menu["values"] = survey_package_names
+
+                # Automatically select the first survey package after the survey selection
+                survey_package_menu.current(0)
+                survey_package_menu.event_generate("<<ComboboxSelected>>")
             else:
                 survey_package_menu["values"] = []
 
@@ -350,3 +365,41 @@ def get_csv_rows_headers(input_file_path, input_file):
             )
 
     return csv_header, csv_rows
+
+
+def restart_new_session(root, import_log_file_path):
+
+    result = messagebox.askquestion(
+        "Import/Validation done",
+        "Done, start another import/validation?",
+        icon="question",
+    )
+
+    if result.upper() in ["YES", "y", "1"]:
+
+        with open(import_log_file_path, "a") as f:
+            f.write("---- STARTING NEW UPLOAD/VALIDATION ----\n")
+
+        import GUI_module
+
+        try:
+            # fetch authentication credentials
+            client_id = os.environ["CLIENT_ID"]
+            client_secret = os.environ["CLIENT_SECRET"]
+            access_token = os.environ["ACCESS_TOKEN"]
+
+            # check if API access token has expired
+            access_token = check_access_token_expiry(access_token)
+            os.environ["ACCESS_TOKEN"] = access_token
+
+            # destroy current window, restart File Explorer window
+            GUI_module.initialize_file_explorer(root, client_id, client_secret)
+
+        except Exception as err:
+            handle_error(err)
+    else:
+        # destroy window
+        root.destroy()
+
+        with open(import_log_file_path, "a") as f:
+            f.write("---- EXITING PROGRAM ----\n")

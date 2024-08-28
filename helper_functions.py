@@ -29,9 +29,7 @@ def search_participant_column_index(csv_header):
     return matched_participant_id_key
 
 
-def create_participant_id(
-    participant_id_raw, site_id, import_log_file_path, session
-):
+def create_participant_id(participant_id_raw, site_id, import_log_file_path, session):
 
     # default params
     castor_study_id = os.environ["CASTOR_EDC_STUDY_ID"]

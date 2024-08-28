@@ -9,7 +9,8 @@ from get_API_access_token import verify_api_credentials
 
 
 # First screen of GUI, used to verify API credentials and getting an API access token:
-def start_gui(root_window):
+def start_gui(root_window, img):
+
     # store access_token initialization time in environment variable
     now = str(time.time())
     os.environ["TIME_INIT_ACCESS"] = now
@@ -20,18 +21,15 @@ def start_gui(root_window):
     # temporarily hide the window to avoid the flickering effect when centering the window
     root_window.withdraw()
 
-    # Create an image widget
-    img_path = os.environ["IMAGE_PATH"]
-    image = Image.open(img_path)
-
     # Set the desired size in pixels
     width, height = 12, 12
 
     # Resize the image
-    image = image.resize((width, height), Image.LANCZOS)
+    image = img.resize((width, height), Image.LANCZOS)
 
-    # Create a PhotoImage object from the resized image
+    # Create a PhotoImage object and store it in the root_window to prevent it from being garbage collected
     photo_image = ImageTk.PhotoImage(image)
+    root_window.photo_image = photo_image
 
     # Create a frame to hold both image and text
     frame_label_widget = Frame(root_window)
@@ -333,7 +331,9 @@ def browse_files(label_file_explorer, file_type=""):
 
             # Get the current working directory (the location from which the executable or script is run)
             current_dir = (
-                sys.argv[0].rsplit(r"\CDB_Survey_Inviter.exe", 1)[0].rsplit(r"\GUI_module.py", 1)[0]
+                sys.argv[0]
+                .rsplit(r"\CDB_Survey_Inviter.exe", 1)[0]
+                .rsplit(r"\GUI_module.py", 1)[0]
             )
 
             os.environ["WORK_DIR"] = current_dir
@@ -342,7 +342,9 @@ def browse_files(label_file_explorer, file_type=""):
 
             # check if "output" folder exists
             if not os.path.exists("output"):
-                print(" -- The 'output' folder does not exist, creating output folder -- ")
+                print(
+                    " -- The 'output' folder does not exist, creating output folder -- "
+                )
                 os.makedirs("output")  # Create the "output" folder
 
             if file_type == "import_file":
@@ -351,7 +353,9 @@ def browse_files(label_file_explorer, file_type=""):
                 os.environ["IMPORT_FILE_PATH"] = filepath.replace("/", "\\")
                 os.environ["IMPORT_FILE_NAME"] = filename
                 os.environ["IMPORT_LOG_FILE_NAME"] = import_log_file_name
-                os.environ["IMPORT_LOG_FILE_PATH"] = output_path + "\\" + import_log_file_name
+                os.environ["IMPORT_LOG_FILE_PATH"] = (
+                    output_path + "\\" + import_log_file_name
+                )
             elif file_type == "import_header":
                 os.environ["IMPORT_HEADER_FILE_PATH"] = filepath.replace("/", "\\")
                 os.environ["IMPORT_HEADER_FILE_NAME"] = filename
@@ -385,12 +389,14 @@ with warnings.catch_warnings(record=True) as captured_warnings:
             # Global variable to store the initial window size
             initial_window_size = None
 
-            os.environ["PRESENTATION_LAYER"] = "GUI"
+            # Load the image from the environment path
+            img_path = os.environ["IMAGE_PATH"]
+            image = Image.open(img_path)
 
             # Call the start_gui function to start the process, only when run from "main" and not when importing
             root = Tk()
             root.title("Castor Survey Inviter")
-            start_gui(root)
+            start_gui(root, image)
         except Exception as e:
             handle_error(e)
 

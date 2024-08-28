@@ -25,7 +25,9 @@ def handle_error(error):
             os.remove(full_error_file_path)
     else:
         datetime_now = datetime.now().strftime("%d_%m_%Y_%H%M%S")
-        full_error_file_path = os.environ["WORK_DIR"] + "\\error_log_" + datetime_now + ".txt"
+        full_error_file_path = (
+            os.environ["WORK_DIR"] + "\\error_log_" + datetime_now + ".txt"
+        )
         os.environ["OUTPUT_ERROR_PATH"] = full_error_file_path
 
     # check if script is run from Pycharm to raise error directly, else write to file
